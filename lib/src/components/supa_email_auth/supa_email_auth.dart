@@ -1,5 +1,11 @@
-import 'package:email_validator/email_validator.dart';
 import 'package:flutter/material.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:supabase_auth_ui/src/components/commons/supa_button_widget.dart';
+import 'package:supabase_auth_ui/src/components/supa_email_auth/widgets/bool_meta_data_field_widget.dart';
+import 'package:supabase_auth_ui/src/components/supa_email_auth/widgets/confirm_password_field_widget.dart';
+import 'package:supabase_auth_ui/src/components/supa_email_auth/widgets/email_field_widget.dart';
+import 'package:supabase_auth_ui/src/components/supa_email_auth/widgets/meta_data_field_widget.dart';
+import 'package:supabase_auth_ui/src/components/supa_email_auth/widgets/password_field_widget.dart';
 import 'package:supabase_auth_ui/src/localizations/supa_email_auth_localization.dart';
 import 'package:supabase_auth_ui/src/utils/constants.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -217,6 +223,9 @@ class SupaEmailAuth extends StatefulWidget {
   /// Whether the confirm password field should be displayed
   final bool showConfirmPasswordField;
 
+  /// whether to show the form in shadcn style
+  final bool? shadcnStyle;
+
   /// {@macro supa_email_auth}
   const SupaEmailAuth({
     super.key,
@@ -236,6 +245,7 @@ class SupaEmailAuth extends StatefulWidget {
     this.prefixIconEmail = const Icon(Icons.email),
     this.prefixIconPassword = const Icon(Icons.lock),
     this.showConfirmPasswordField = false,
+    this.shadcnStyle = false,
   });
 
   @override
@@ -294,78 +304,35 @@ class _SupaEmailAuthState extends State<SupaEmailAuth> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            TextFormField(
-              keyboardType: TextInputType.emailAddress,
-              autofillHints: const [AutofillHints.email],
-              autovalidateMode: AutovalidateMode.onUserInteraction,
-              autofocus: true,
-              focusNode: _emailFocusNode,
-              textInputAction: _isRecoveringPassword
-                  ? TextInputAction.done
-                  : TextInputAction.next,
-              validator: (value) {
-                if (value == null ||
-                    value.isEmpty ||
-                    !EmailValidator.validate(_emailController.text)) {
-                  return localization.validEmailError;
-                }
-                return null;
-              },
-              decoration: InputDecoration(
-                prefixIcon: widget.prefixIconEmail,
-                label: Text(localization.enterEmail),
-              ),
-              controller: _emailController,
-              onFieldSubmitted: (_) {
-                if (_isRecoveringPassword) {
-                  _passwordRecovery();
-                }
-              },
+            /// Email field
+            EmailFieldWidget(
+              emailFocusNode: _emailFocusNode,
+              isRecoveringPassword: _isRecoveringPassword,
+              emailController: _emailController,
+              localization: localization,
+              prefixIconEmail: widget.prefixIconEmail,
+              passwordRecovery: _passwordRecovery,
+              shadcnStyle: widget.shadcnStyle ?? false,
             ),
             if (!_isRecoveringPassword) ...[
               spacer(16),
-              TextFormField(
-                autofillHints: _isSigningIn
-                    ? [AutofillHints.password]
-                    : [AutofillHints.newPassword],
-                autovalidateMode: AutovalidateMode.onUserInteraction,
-                textInputAction: widget.metadataFields != null && !_isSigningIn
-                    ? TextInputAction.next
-                    : TextInputAction.done,
-                validator: widget.passwordValidator ??
-                    (value) {
-                      if (value == null || value.isEmpty || value.length < 6) {
-                        return localization.passwordLengthError;
-                      }
-                      return null;
-                    },
-                decoration: InputDecoration(
-                  prefixIcon: widget.prefixIconPassword,
-                  label: Text(localization.enterPassword),
-                ),
-                obscureText: true,
-                controller: _passwordController,
-                onFieldSubmitted: (_) {
-                  if (widget.metadataFields == null || _isSigningIn) {
-                    _signInSignUp();
-                  }
-                },
+              PasswordFieldWidget(
+                isSigningIn: _isSigningIn,
+                passwordValidator: widget.passwordValidator,
+                localization: localization,
+                prefixIconPassword: widget.prefixIconPassword,
+                shadcnStyle: widget.shadcnStyle ?? false,
+                passwordController: _passwordController,
+                signInSignUp: _signInSignUp,
               ),
               if (widget.showConfirmPasswordField && !_isSigningIn) ...[
                 spacer(16),
-                TextFormField(
-                  controller: _confirmPasswordController,
-                  decoration: InputDecoration(
-                    prefixIcon: widget.prefixIconPassword,
-                    label: Text(localization.confirmPassword),
-                  ),
-                  obscureText: true,
-                  validator: (value) {
-                    if (value != _passwordController.text) {
-                      return localization.confirmPasswordError;
-                    }
-                    return null;
-                  },
+                ConfirmPasswordFieldWidget(
+                  passwordController: _passwordController,
+                  confirmPasswordController: _confirmPasswordController,
+                  localization: localization,
+                  shadcnStyle: widget.shadcnStyle,
+                  prefixIconPassword: widget.prefixIconPassword,
                 ),
               ],
               spacer(16),
@@ -387,6 +354,14 @@ class _SupaEmailAuthState extends State<SupaEmailAuth> {
                                   : null,
                               builder: (FormFieldState<bool> field) {
                                 final theme = Theme.of(context);
+
+                                if (widget.shadcnStyle == true) {
+                                  return BoolMetaDataFieldWidget(
+                                    booleanMetaDataField: metadataField,
+                                    metadataControllers: _metadataControllers,
+                                    localization: localization,
+                                  );
+                                }
 
                                 return Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -430,34 +405,19 @@ class _SupaEmailAuthState extends State<SupaEmailAuth> {
                           else
                             // Otherwise render a normal TextFormField matching
                             // the style of the other fields in the form.
-                            TextFormField(
-                              controller:
-                                  _metadataControllers[metadataField.key]
-                                      as TextEditingController,
-                              textInputAction:
-                                  widget.metadataFields!.last == metadataField
-                                      ? TextInputAction.done
-                                      : TextInputAction.next,
-                              decoration: InputDecoration(
-                                label: Text(metadataField.label),
-                                prefixIcon: metadataField.prefixIcon,
-                              ),
-                              validator: metadataField.validator,
-                              autovalidateMode:
-                                  AutovalidateMode.onUserInteraction,
-                              onFieldSubmitted: (_) {
-                                if (metadataField !=
-                                    widget.metadataFields!.last) {
-                                  FocusScope.of(context).nextFocus();
-                                } else {
-                                  _signInSignUp();
-                                }
-                              },
+                            MetaDataFieldWidget(
+                              metadataField: metadataField,
+                              metadataControllers: _metadataControllers,
+                              metadataFields: widget.metadataFields,
+                              signInSignUp: _signInSignUp,
+                              shadcnStyle: widget.shadcnStyle ?? false,
+                              previousContext: context,
                             ),
                           spacer(16),
                         ])
                     .expand((element) => element),
-              ElevatedButton(
+              SupaElevatedButtonWidget(
+                shadcnStyle: widget.shadcnStyle,
                 onPressed: _signInSignUp,
                 child: (_isLoading)
                     ? SizedBox(
@@ -474,7 +434,7 @@ class _SupaEmailAuthState extends State<SupaEmailAuth> {
               ),
               spacer(16),
               if (_isSigningIn) ...[
-                TextButton(
+                SupaTextButtonWidget(
                   onPressed: () {
                     setState(() {
                       _isRecoveringPassword = true;
@@ -484,7 +444,7 @@ class _SupaEmailAuthState extends State<SupaEmailAuth> {
                   child: Text(localization.forgotPassword),
                 ),
               ],
-              TextButton(
+              SupaTextButtonWidget(
                 key: const ValueKey('toggleSignInButton'),
                 onPressed: () {
                   setState(() {
@@ -501,12 +461,12 @@ class _SupaEmailAuthState extends State<SupaEmailAuth> {
             ],
             if (_isSigningIn && _isRecoveringPassword) ...[
               spacer(16),
-              ElevatedButton(
+              SupaElevatedButtonWidget(
                 onPressed: _passwordRecovery,
                 child: Text(localization.sendPasswordReset),
               ),
               spacer(16),
-              TextButton(
+              SupaTextButtonWidget(
                 onPressed: () {
                   setState(() {
                     _isRecoveringPassword = false;

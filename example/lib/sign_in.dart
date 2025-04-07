@@ -1,12 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:supabase_auth_ui/supabase_auth_ui.dart';
 
 import 'constants.dart';
 
 class SignUp extends StatelessWidget {
-  const SignUp({Key? key}) : super(key: key);
+  const SignUp({super.key});
   @override
   Widget build(BuildContext context) {
     void navigateHome(AuthResponse response) {
@@ -50,9 +51,12 @@ class SignUp extends StatelessWidget {
         padding: const EdgeInsets.all(24.0),
         children: [
           SupaEmailAuth(
+            shadcnStyle: true,
             redirectTo: kIsWeb ? null : 'io.supabase.flutter://',
             onSignInComplete: navigateHome,
             onSignUpComplete: navigateHome,
+            showConfirmPasswordField: true,
+           
             metadataFields: [
               MetaDataField(
                 prefixIcon: const Icon(Icons.person),

@@ -15,10 +15,12 @@ class SupaEmailAuthLocalization {
   final String requiredFieldError;
   final String confirmPasswordError;
   final String confirmPassword;
+  final String placeholderEmail;
 
   const SupaEmailAuthLocalization({
     this.enterEmail = 'Enter your email',
     this.validEmailError = 'Please enter a valid email address',
+    this.placeholderEmail = 'm@example.com',
     this.enterPassword = 'Enter your password',
     this.passwordLengthError =
         'Please enter a password that is at least 6 characters long',
